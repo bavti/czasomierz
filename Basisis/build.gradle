@@ -22,6 +22,7 @@ repositories {
 }
 
 dependencies {
+    implementation "com.android.support:support-compat:27.1.1"
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation project(':base')
     testImplementation 'junit:junit:4.12'

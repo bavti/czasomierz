@@ -1,12 +1,19 @@
 package com.okurrr.android.czasomierz.Basisis;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Chronometer;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Ticker;
@@ -16,17 +23,12 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
-    //TODO: zrobienie podgladu na zywo danych godzin, zapewne na thredach, ktore beda trzymane na liscie i utrzymymwane tylko wtedy
-    //TODO: kiedy dany timer bedzie wlaczony i bedzie dzial, do sprawdzenia czy tez wtedy kiedy bedzie dziala appka w tle czy tylko na pierwszym planie
-
-
     //nie wiem czy tak sie robi czy jest jakis inny sposob na logike za przyciskami i polami w activitach czy moze to sie robi w ogole w inny sposob
-    TextView oneT, twoT, threeT, fourT, fiveT, sixT, sevenT, eightT, nineT;
-    Button buttonOne, buttonTwo, buttonThree, buttonFour, buttonFive, buttonSix, buttonSeven, buttonEight, buttonNine, buttonRefresh;
+    public Button buttonOne, buttonTwo, buttonThree, buttonFour, buttonFive, buttonSix, buttonSeven, buttonEight, buttonNine, buttonRefresh;
     Manager manager;
-    Chronometer simpleChronometer;
-    boolean oneStarted, firstOne;
-    private long lastPause;
+    public Chronometer firstChrono, secondChrono, thirdChrono, fourthChrono, fifthChrono, sixthChrono, seventhChrono, eightChrono, ninthChrono;
+    public boolean firstStarted, secondStarted, thirdStarted, fourthStarted, fifthStarted, sixthStarted, seventhStarted, eightStarted, ninthStarted;
+    public long firstPause, secondPause, thirdPause, fourthPause, fifthPause, sixthPause, seventhPause, eightPause, ninthPause;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,119 +52,97 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         buttonEight.setOnClickListener(this);
         buttonNine = (Button) findViewById(R.id.button9);
         buttonNine.setOnClickListener(this);
-        buttonRefresh = (Button) findViewById(R.id.buttonRefresh);
-        buttonRefresh.setOnClickListener(this);
 
-        simpleChronometer = (Chronometer) findViewById(R.id.simpleChronometer); // initiate a chronometer
-        //oneT = (TextView) findViewById(R.id.editText);
-        //oneT.setKeyListener(null);
-        twoT = (TextView) findViewById(R.id.editText2);
-        twoT.setKeyListener(null);
-        threeT = (TextView) findViewById(R.id.editText3);
-        threeT.setKeyListener(null);
-        fourT = (TextView) findViewById(R.id.editText4);
-        fourT.setKeyListener(null);
-        fiveT = (TextView) findViewById(R.id.editText5);
-        fiveT.setKeyListener(null);
-        sixT = (TextView) findViewById(R.id.editText6);
-        sixT.setKeyListener(null);
-        sevenT = (TextView) findViewById(R.id.editText7);
-        sevenT.setKeyListener(null);
-        eightT = (TextView) findViewById(R.id.editText8);
-        eightT.setKeyListener(null);
-        nineT = (TextView) findViewById(R.id.editText9);
-        nineT.setKeyListener(null);
+        firstChrono = (Chronometer) findViewById(R.id.chronometer1);
+        secondChrono = (Chronometer) findViewById(R.id.chronometer2);
+        thirdChrono = (Chronometer) findViewById(R.id.chronometer3);
+        fourthChrono = (Chronometer) findViewById(R.id.chronometer4);
+        fifthChrono = (Chronometer) findViewById(R.id.chronometer5);
+        sixthChrono = (Chronometer) findViewById(R.id.chronometer6);
+        seventhChrono = (Chronometer) findViewById(R.id.chronometer7);
+        eightChrono = (Chronometer) findViewById(R.id.chronometer8);
+        ninthChrono = (Chronometer) findViewById(R.id.chronometer9);
+        firstChrono.setBase(SystemClock.elapsedRealtime());
 
         manager = new Manager();
-        lastPause = 0;
-        //simpleChronometer.setBase(SystemClock.elapsedRealtime());
-        oneStarted = false;
+        firstPause = 0; secondPause = 0; thirdPause = 0; fourthPause = 0; fifthPause = 0; sixthPause = 0; seventhPause = 0; eightPause = 0; ninthPause = 0;
+        firstStarted = false; secondStarted = false; thirdStarted = false; fourthStarted = false; fifthStarted = false; sixthStarted = false; seventhStarted = false; eightStarted = false; ninthStarted = false;
     }
 
-    //zanim zdolalem to spakowac w jedna funkcje to troche sie nawymyslalem jak mozna uproscic i skrocic zarzadzanie cala logika appki
-    public void managerOfTimerClick(Timer timer, TextView textView, Button button){
+    public void buttonHandler(Chronometer chronometer, boolean started, long lastPause, Button button, Timer timer){
         if(timer.getStarted() == false){
-            timer.startTimer();
-            refreshTime(timer, textView);
-            button.setText("Stop");
+            chronometer.setBase(SystemClock.elapsedRealtime() + lastPause);
+            chronometer.start();
+            makeAToast("Starting a timer :D !");
+            button.setText("Refresh");
             timer.setStarted(true);
-        }else {
-            timer.stopTimer();
-            refreshTime(timer, textView);
+        }else if(timer.getStarted() == true){
+            chronometer.stop();
+            lastPause = chronometer.getBase() - SystemClock.elapsedRealtime();
             button.setText("Start!");
             timer.setStarted(false);
         }
     }
 
-    public void refreshTime(Timer timer, TextView textView){
-        textView.setText(timer.getTime());
+    public void makeANotification(){
+        NotificationManager mNotificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel("default",
+                    "YOUR_CHANNEL_NAME",
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription("YOUR_NOTIFICATION_CHANNEL_DISCRIPTION");
+            mNotificationManager.createNotificationChannel(channel);
+        }
+        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(MainActivity.this, "default")
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle("Czasomierz LO-Hłan!")
+                .setContentText("Już połowa czasu!")
+                .setStyle(new NotificationCompat.BigTextStyle()
+                        .bigText("Minęły już 4 godziny Twojego siedzenia w biurze Henny!"))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setAction(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+                intent, 0);
+
+        mBuilder.setContentIntent(pendingIntent);
+        mNotificationManager.notify(0, mBuilder.build());
     }
 
-    public void buttonHandler(){
-        if(oneStarted == false){
-            //simpleChronometer.setBase(simpleChronometer.getBase() + SystemClock.elapsedRealtime() - lastPause);
-            simpleChronometer.setBase(SystemClock.elapsedRealtime() + lastPause);
-            simpleChronometer.start();
-            //simpleChronometer.start();
-            System.out.println("Started");
-            //refreshTime(timer, textView);
-            buttonOne.setText("Stop");
-            oneStarted = true;
-        }else if(oneStarted == true){
-            simpleChronometer.stop();
-            lastPause = simpleChronometer.getBase() - SystemClock.elapsedRealtime();
-            System.out.println("Stopped");
-            //refreshTime(timer, textView);
-            buttonOne.setText("Start!");
-            oneStarted = false;
-        }
+    public void makeAToast(String toastText){
+        Context context = getApplicationContext();
+        CharSequence text = toastText;
+        int duration = Toast.LENGTH_SHORT;
+        Toast toast = Toast.makeText(context, text, duration);
+        toast.show();
     }
 
     //podobno nie stosuje sie juz tutaj switcha, wiec doradzono mi bazowanie na ifach
     public void onClick(View v) {
         int i = v.getId();
         if (i == R.id.button ) {
-            if(firstOne == false){
-                simpleChronometer.setBase(SystemClock.elapsedRealtime() + lastPause);
-                simpleChronometer.start();
-                System.out.println("Started for the first time");
-                //refreshTime(timer, textView);
-                buttonOne.setText("Stop");
-                oneStarted = true;
-                firstOne = true;
-            }else{
-                buttonHandler();
-            }
-
-            //managerOfTimerClick(manager.firstTimer, oneT, buttonOne);
+            buttonHandler(firstChrono, firstStarted, firstPause, buttonOne, manager.firstTimer);
         } else if (i == R.id.button2) {
-            managerOfTimerClick(manager.secondTimer, twoT, buttonTwo);
+            buttonHandler(secondChrono, secondStarted, secondPause, buttonTwo, manager.secondTimer);
         } else if (i == R.id.button3) {
-            managerOfTimerClick(manager.thirdTimer, threeT, buttonThree);
+            buttonHandler(thirdChrono, thirdStarted, thirdPause, buttonThree, manager.thirdTimer);
         } else if (i == R.id.button4) {
-            managerOfTimerClick(manager.fourthTimer, fourT, buttonFour);
+            buttonHandler(fourthChrono, fourthStarted, fourthPause, buttonFour, manager.fourthTimer);
         } else if (i == R.id.button5) {
-            managerOfTimerClick(manager.fifthTimer, fiveT, buttonFive);
+            buttonHandler(fifthChrono, fifthStarted, fifthPause, buttonFive, manager.fifthTimer);
         } else if (i == R.id.button6) {
-            managerOfTimerClick(manager.sixthTimer, sixT, buttonSix);
+            buttonHandler(sixthChrono, sixthStarted, sixthPause, buttonSix, manager.sixthTimer);
+            makeANotification();
         } else if (i == R.id.button7) {
-            managerOfTimerClick(manager.seventhTimer, sevenT, buttonSeven);
+            buttonHandler(seventhChrono, seventhStarted, seventhPause, buttonSeven, manager.seventhTimer);
         } else if (i == R.id.button8) {
-            managerOfTimerClick(manager.eighthTimer, eightT, buttonEight);
+            buttonHandler(eightChrono, eightStarted, eightPause, buttonEight, manager.eighthTimer);
         } else if (i == R.id.button9) {
-            managerOfTimerClick(manager.ninthTimer, nineT, buttonNine);
-        } else if (i == R.id.buttonRefresh) {
-            //najswiezszy dodatek, musze go jeszcze dostosowac
-            //refreshTime(manager.firstTimer, oneT);
-            refreshTime(manager.secondTimer, twoT);
-            refreshTime(manager.thirdTimer, threeT);
-            refreshTime(manager.fourthTimer, fourT);
-            refreshTime(manager.fifthTimer, fiveT);
-            refreshTime(manager.sixthTimer, sixT);
-            refreshTime(manager.seventhTimer, sevenT);
-            refreshTime(manager.eighthTimer, eightT);
-            refreshTime(manager.ninthTimer, nineT);
-
+            buttonHandler(ninthChrono, ninthStarted, ninthPause, buttonNine, manager.ninthTimer);
         }
     }
 }
+
